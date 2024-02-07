@@ -1,0 +1,65 @@
+version: '3.8'
+services:
+
+  stats-server:
+    build: admin/
+    container_name: admin
+    restart: always
+    depends_on:
+      stats_db:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats_db:5432/hospital-DB
+      - SPRING_DATASOURCE_USERNAME=test
+      - SPRING_DATASOURCE_PASSWORD=test
+
+
+  appointment:
+    build: appointment/
+    container_name: appointment
+    restart: on-failure
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/hospital-DB
+      - SPRING_DATASOURCE_USERNAME=test
+      - SPRING_DATASOURCE_PASSWORD=test
+
+  schedule:
+    build: schedule/
+    container_name: schedule
+    restart: on-failure
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/hospital-DB
+      - SPRING_DATASOURCE_USERNAME=test
+      - SPRING_DATASOURCE_PASSWORD=test
+
+
+  hospital-DB:
+    container_name: hospital-DB
+    image: postgres
+    restart: on-failure
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    environment:
+      POSTGRES_DB: hospital-DB
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      PGDATA: /home/aleksandr/dev/hospital-DB
+    volumes:
+      - ./stats-server/schema.sql:/docker-entrypoint-initdb.d/schema.sql
